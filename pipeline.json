@@ -1,0 +1,369 @@
+{
+    "Metadata": {
+    },
+    "Parameters": [
+        {
+            "DefaultValue": "s3://sagemaker-studio-7oabgjsj0b7/datasets/raw/train.jsonl",
+            "Name": "TrainInputS3Uri",
+            "Type": "String"
+        },
+        {
+            "DefaultValue": "s3://sagemaker-studio-7oabgjsj0b7/datasets/raw/test.jsonl",
+            "Name": "TestInputS3Uri",
+            "Type": "String"
+        },
+        {
+            "DefaultValue": "PendingManualApproval",
+            "Name": "ModelApprovalStatus",
+            "Type": "String"
+        },
+        {
+            "DefaultValue": "arn:aws:sagemaker:us-east-1:109038807292:mlflow-tracking-server/tracking-server-4gnc5g87j3w4vb-3rt7rqb89qmt5z-dev",
+            "Name": "MLflowTrackingURI",
+            "Type": "String"
+        }
+    ],
+    "PipelineExperimentConfig": {
+        "ExperimentName": {
+            "Get": "Execution.PipelineName"
+        },
+        "TrialName": {
+            "Get": "Execution.PipelineExecutionId"
+        }
+    },
+    "Steps": [
+        {
+            "Arguments": {
+                "AppSpecification": {
+                    "ContainerArguments": [
+                        "--train_input",
+                        "/opt/ml/processing/train_input/train.jsonl",
+                        "--test_input",
+                        "/opt/ml/processing/test_input/test.jsonl",
+                        "--train_output",
+                        "/opt/ml/processing/train_output/train.jsonl",
+                        "--test_output",
+                        "/opt/ml/processing/test_output/test.jsonl"
+                    ],
+                    "ContainerEntrypoint": [
+                        "python3",
+                        "/opt/ml/processing/input/code/preprocess.py"
+                    ],
+                    "ImageUri": "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3"
+                },
+                "ProcessingInputs": [
+                    {
+                        "AppManaged": false,
+                        "InputName": "train_input",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/train_input",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": {
+                                "Get": "Parameters.TrainInputS3Uri"
+                            }
+                        }
+                    },
+                    {
+                        "AppManaged": false,
+                        "InputName": "test_input",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/test_input",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": {
+                                "Get": "Parameters.TestInputS3Uri"
+                            }
+                        }
+                    },
+                    {
+                        "AppManaged": false,
+                        "InputName": "code",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": "s3://sagemaker-us-east-1-109038807292/PreprocessData-1f7d5f75130e919262aad0f8bad707e8fd9c27132d5fa99ae44e26cb1aa30ee3/input/code/preprocess.py"
+                        }
+                    }
+                ],
+                "ProcessingOutputConfig": {
+                    "Outputs": [
+                        {
+                            "AppManaged": false,
+                            "OutputName": "train_output",
+                            "S3Output": {
+                                "LocalPath": "/opt/ml/processing/train_output",
+                                "S3UploadMode": "EndOfJob",
+                                "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/datasets/train/"
+                            }
+                        },
+                        {
+                            "AppManaged": false,
+                            "OutputName": "test_output",
+                            "S3Output": {
+                                "LocalPath": "/opt/ml/processing/test_output",
+                                "S3UploadMode": "EndOfJob",
+                                "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/datasets/eval/"
+                            }
+                        }
+                    ]
+                },
+                "ProcessingResources": {
+                    "ClusterConfig": {
+                        "InstanceCount": 1,
+                        "InstanceType": "ml.m5.large",
+                        "VolumeSizeInGB": 30
+                    }
+                },
+                "RoleArn": "arn:aws:iam::109038807292:role/service-role/AmazonSageMaker-ExecutionRole-20250622T130599"
+            },
+            "Name": "PreprocessData",
+            "Type": "Processing"
+        },
+        {
+            "Arguments": {
+                "AlgorithmSpecification": {
+                    "EnableSageMakerMetricsTimeSeries": true,
+                    "TrainingImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-training:2.5.1-transformers4.49.0-gpu-py311-cu124-ubuntu22.04",
+                    "TrainingInputMode": "File"
+                },
+                "CheckpointConfig": {
+                    "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/hermespro/checkpoints/"
+                },
+                "DebugHookConfig": {
+                    "CollectionConfigurations": [
+                    ],
+                    "S3OutputPath": "s3://sagemaker-us-east-1-109038807292/"
+                },
+                "Environment": {
+                    "MLFLOW_TRACKING_URI": {
+                        "Get": "Parameters.MLflowTrackingURI"
+                    },
+                    "PYTORCH_CUDA_ALLOC_CONF": "expandable_segments:True"
+                },
+                "HyperParameters": {
+                    "DATA_PATH": "\"/opt/ml/input/data/train/train.jsonl\"",
+                    "EVAL_PATH": "\"/opt/ml/input/data/eval/test.jsonl\"",
+                    "HF_MODEL_NAME": "\"NousResearch/Hermes-2-Pro-Mistral-7B\"",
+                    "OUTPUT_DIR": "\"/opt/ml/model\"",
+                    "sagemaker_container_log_level": "20",
+                    "sagemaker_program": "\"train_lora.py\"",
+                    "sagemaker_region": "\"us-east-1\"",
+                    "sagemaker_submit_directory": "\"s3://sagemaker-us-east-1-109038807292/TrainHermesProModel-aa995dd80531192dbdf9926700b49482e13b503dfc6e6ab237afca68ed7216ea/source/sourcedir.tar.gz\""
+                },
+                "InputDataConfig": [
+                    {
+                        "ChannelName": "train",
+                        "ContentType": "application/json",
+                        "DataSource": {
+                            "S3DataSource": {
+                                "S3DataDistributionType": "FullyReplicated",
+                                "S3DataType": "S3Prefix",
+                                "S3Uri": {
+                                    "Get": "Steps.PreprocessData.ProcessingOutputConfig.Outputs['train_output'].S3Output.S3Uri"
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "ChannelName": "eval",
+                        "ContentType": "application/json",
+                        "DataSource": {
+                            "S3DataSource": {
+                                "S3DataDistributionType": "FullyReplicated",
+                                "S3DataType": "S3Prefix",
+                                "S3Uri": {
+                                    "Get": "Steps.PreprocessData.ProcessingOutputConfig.Outputs['test_output'].S3Output.S3Uri"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "OutputDataConfig": {
+                    "S3OutputPath": "s3://sagemaker-us-east-1-109038807292/"
+                },
+                "ProfilerConfig": {
+                    "DisableProfiler": false,
+                    "S3OutputPath": "s3://sagemaker-us-east-1-109038807292/"
+                },
+                "ResourceConfig": {
+                    "InstanceCount": 1,
+                    "InstanceType": "ml.g5.2xlarge",
+                    "VolumeSizeInGB": 30
+                },
+                "RoleArn": "arn:aws:iam::109038807292:role/service-role/AmazonSageMaker-ExecutionRole-20250622T130599",
+                "StoppingCondition": {
+                    "MaxRuntimeInSeconds": 32000
+                }
+            },
+            "CacheConfig": {
+                "Enabled": true,
+                "ExpireAfter": "30d"
+            },
+            "Name": "TrainHermesProModel",
+            "Type": "Training"
+        },
+        {
+            "Arguments": {
+                "AppSpecification": {
+                    "ContainerArguments": [
+                        "--model_dir",
+                        "/opt/ml/processing/model",
+                        "--test_input",
+                        "/opt/ml/processing/input/test_prompts.jsonl",
+                        "--output_file",
+                        "/opt/ml/processing/evaluation/evaluation.json"
+                    ],
+                    "ContainerEntrypoint": [
+                        "python3",
+                        "/opt/ml/processing/input/code/run_evaluation.py"
+                    ],
+                    "ImageUri": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.6.0-transformers4.49.0-gpu-py312-cu124-ubuntu22.04"
+                },
+                "ProcessingInputs": [
+                    {
+                        "AppManaged": false,
+                        "InputName": "input-1",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/model",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": {
+                                "Get": "Steps.TrainHermesProModel.ModelArtifacts.S3ModelArtifacts"
+                            }
+                        }
+                    },
+                    {
+                        "AppManaged": false,
+                        "InputName": "input-2",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/input",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/datasets/evaluation/test_prompts.jsonl"
+                        }
+                    },
+                    {
+                        "AppManaged": false,
+                        "InputName": "input-3",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/code",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": "s3://sagemaker-us-east-1-109038807292/Hermes2Pro-Mistral-Finetuning-Pipeline/EvaluateHopJetAirModel/input/input-3/requirements.txt"
+                        }
+                    },
+                    {
+                        "AppManaged": false,
+                        "InputName": "code",
+                        "S3Input": {
+                            "LocalPath": "/opt/ml/processing/input/code",
+                            "S3CompressionType": "None",
+                            "S3DataDistributionType": "FullyReplicated",
+                            "S3DataType": "S3Prefix",
+                            "S3InputMode": "File",
+                            "S3Uri": "s3://sagemaker-us-east-1-109038807292/EvaluateHopJetAirModel-e950d42d952fc492b102fbafdd3e319c6eb4103d58e3b8fb67f16934232241c7/input/code/run_evaluation.py"
+                        }
+                    }
+                ],
+                "ProcessingOutputConfig": {
+                    "Outputs": [
+                        {
+                            "AppManaged": false,
+                            "OutputName": "evaluation",
+                            "S3Output": {
+                                "LocalPath": "/opt/ml/processing/evaluation",
+                                "S3UploadMode": "EndOfJob",
+                                "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/metrics/"
+                            }
+                        }
+                    ]
+                },
+                "ProcessingResources": {
+                    "ClusterConfig": {
+                        "InstanceCount": 1,
+                        "InstanceType": "ml.g5.2xlarge",
+                        "VolumeSizeInGB": 30
+                    }
+                },
+                "RoleArn": "arn:aws:iam::109038807292:role/service-role/AmazonSageMaker-ExecutionRole-20250622T130599"
+            },
+            "DependsOn": [
+                "TrainHermesProModel"
+            ],
+            "Name": "EvaluateHopJetAirModel",
+            "PropertyFiles": [
+                {
+                    "FilePath": "evaluation.json",
+                    "OutputName": "evaluation",
+                    "PropertyFileName": "EvaluationMetrics"
+                }
+            ],
+            "Type": "Processing"
+        },
+        {
+            "Arguments": {
+                "InferenceSpecification": {
+                    "Containers": [
+                        {
+                            "Environment": {
+                            },
+                            "Image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-training:2.5.1-transformers4.49.0-gpu-py311-cu124-ubuntu22.04",
+                            "ModelDataUrl": {
+                                "Get": "Steps.TrainHermesProModel.ModelArtifacts.S3ModelArtifacts"
+                            }
+                        }
+                    ],
+                    "SupportedContentTypes": [
+                        "application/json"
+                    ],
+                    "SupportedRealtimeInferenceInstanceTypes": [
+                        "ml.g5.2xlarge"
+                    ],
+                    "SupportedResponseMIMETypes": [
+                        "application/json"
+                    ],
+                    "SupportedTransformInstanceTypes": [
+                        "ml.m5.xlarge"
+                    ]
+                },
+                "ModelApprovalStatus": {
+                    "Get": "Parameters.ModelApprovalStatus"
+                },
+                "ModelMetrics": {
+                    "Bias": {
+                    },
+                    "Explainability": {
+                    },
+                    "ModelQuality": {
+                        "Statistics": {
+                            "ContentType": "application/json",
+                            "S3Uri": "s3://sagemaker-studio-7oabgjsj0b7/metrics/evaluation.json"
+                        }
+                    }
+                },
+                "ModelPackageGroupName": "HopJetAirHermesProMistral",
+                "SkipModelValidation": "None"
+            },
+            "DependsOn": [
+                "EvaluateHopJetAirModel"
+            ],
+            "Name": "HopJetAir-RegisterModel",
+            "Type": "RegisterModel"
+        }
+    ],
+    "Version": "2020-12-01"
+}

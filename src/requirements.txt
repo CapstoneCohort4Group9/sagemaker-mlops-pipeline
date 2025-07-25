@@ -1,0 +1,7 @@
+mlflow==3.0.0
+sagemaker-mlflow==0.1.0
+nltk
+evaluate
+rouge_score
+absl-py
+sacrebleu
